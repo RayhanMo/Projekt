@@ -1,22 +1,46 @@
 import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class SkipListSet <T extends Comparable<T>> implements SortedSet<T> {
     public int level;
-    public int height;
-    public ArrayList<ArrayList<T>> grid;
-    public SkipListSet()
-    {
-        grid = null;
-    }
+    Integer
+    public int height = 5;
+ArrayList
+    LinkedList
+    //ConcurrentSkipListMap
+    public SkipListSetItem head; // beginning of row 1 colum 1
+
+    public SkipListSetItem tail; // end of row 1 colum N
+
+    public SkipListSetItem hat; // top of skip list
+
+    public SkipListSetItem shoes; // bottom of the skip list
+
+    public int size = 0;
+
     public SkipListSet(Collection<T> collection)
     {
-        level = 1;
-        height = 1;
-        grid.get(level - 1) = (ArrayList<T>) collection;
+
     }
     @Override
     public Comparator<? super T> comparator() {
         return null;
+    }
+
+    private void createNewList(Collection<T> collection)
+    {
+        ArrayList<SkipListSetItem> list = new ArrayList<SkipListSetItem>();
+        for(T c : collection)
+        {
+            list.add(new SkipListSetItem(c));
+        }
+        for(SkipListSetItem s : list)
+        {
+            add(s);
+        }
+
     }
 
     @Override
@@ -36,22 +60,22 @@ public class SkipListSet <T extends Comparable<T>> implements SortedSet<T> {
 
     @Override
     public T first() {
-        return null;
+        return (T) this.head.data;
     }
 
     @Override
     public T last() {
-        return null;
+        return (T) this.tail.data;
     }
 
     @Override
     public int size() {
-        return 0;
+        return this.size;
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return this.tail == null && this.head == null;
     }
 
     @Override
@@ -76,28 +100,122 @@ public class SkipListSet <T extends Comparable<T>> implements SortedSet<T> {
 
     @Override
     public boolean add(T t) {
+        SkipListSetItem newItem = new SkipListSetItem(t);
+        int counter = height;
+        int i = 0;
+        SkipListSetItem[] traverseList = new SkipListSetItem[height];
+        if(this.head == null && this.tail == null)
+        {
+            this.head = newItem;
+            this.tail = newItem;
+            SkipListSetItem[] newList = new SkipListSetItem[height - 1];
+            for(int k =  0 ; k < height - 1; k++)
+            {
+                newList[k] = new SkipListSetItem(t);
+            }
+            SkipListSetItem current = this.head;
+            while(counter != height)
+            {
+                current.up = newList[counter];
+                counter++;
+            }
+            return true;
+        }
+        if(this.head.compareTo(t) > 1)
+        {
+            SkipListSetItem<T> current = this.head;
+            SkipListSetItem[] upList = new SkipListSetItem[height];
+            while(current.down != null)
+                current = current.down;
+            newItem.next = current;
+            current.prev = newItem;
+            current.up = null;
+            current.down = null;
+            this.head = newItem;
+            for(int j = 0; j < height; j++)
+            {
+                upList[j] = new SkipListSetItem(t);
+            }
+            counter = height;
+            current = this.head;
+            int j = 0;
+            while(counter != 0)
+            {
+                current.down = upList[j];
+                j++;
+                counter--;
+                current = current.down;
+            }
+            counter = height;
+            while(counter != 0)
+            {
+                current.up = upList[j];
+                j--;
+                counter--;
+                current = current.up;
+            }
+            return true;
+        }
+        if(this.tail.compareTo(t) < 0)
+        {
+            //rando height the tail;
+        }
+        SkipListSetItem left =  this.head;
+        SkipListSetItem right = this.head.next;
+        while(counter != 0){
+        if(right == null)
+        {
+            traverseList[i] = left;
+            counter--;
+            left = left.down;
+            right = left.next;
+            continue;
+
+        }
+        if(left.compareTo(t) > 0) // left is less than t
+        {
+            left = right;
+            right = left.next;
+            continue;
+        }
+        if(right.compareTo(t) > 0 && left.compareTo(t) < 0) //perfect spot
+        {
+            left = left.down;
+            right = left.next;
+            traverseList[i] = left;
+            counter--;
+            continue;
+        }
+        }
+        newItem.prev = left;
+        newItem.next = right;
+
+
+
         return false;
     }
+
+
 
     @Override
     public boolean remove(Object o) {
         return false;
-    }
+    }//deletes one object
 
     @Override
     public boolean containsAll(Collection<?> c) {
         return false;
-    }
+    }//sentiel value this bitch
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
         return false;
-    }
+    }// foreach element, add
 
     @Override
     public boolean retainAll(Collection<?> c) {
         return false;
-    }
+    } // delete the elements outside of the set, rebalance list
 
     @Override
     public boolean removeAll(Collection<?> c) {
@@ -106,7 +224,44 @@ public class SkipListSet <T extends Comparable<T>> implements SortedSet<T> {
 
     @Override
     public void clear() {
+        this.head = null;
+        this.tail = null;
+        this.size = 0;
+    }
+    private SkipListSetItem<T> findElement(T t)
+    {
+        if(this.isEmpty())
+            return null;
+        SkipListSetItem<T> current = this.head;
+        SkipListSetItem<T> foundItem = null;
+        int counter = height;
+        while(counter != 0)
+        {
+            if(current.compareTo(t) == 0)
+            {
+                foundItem = current;
+                break;
+            }
+            if(current.compareTo(t) > 0)
+            {
+                if(current.next == null)
+                {
+                    current = current.down;
+                    counter--;
+                }
+                current = current.next;
+            }
+            if(current.compareTo(t) < 0)
+            {
 
+            }
+
+        }
+        while(foundItem.down != null)
+        {
+            foundItem = foundItem.down;
+        }
+        return foundItem;
     }
     private class  SkipListIterator<T extends Comparable<T>> implements Iterator<T>
     {
@@ -126,11 +281,31 @@ public class SkipListSet <T extends Comparable<T>> implements SortedSet<T> {
             Iterator.super.remove();
         }
     }
-    private class SkipListSetItem<T>
+    private class SkipListSetItem<T extends Comparable<T>>
     {
-        private T data;
-        private T next;
-        private T prev;
+        public T data;
+        private SkipListSetItem next;
+        private SkipListSetItem prev;
+        private SkipListSetItem up;
+
+        private SkipListSetItem down;
+
+        private int girth;
+
+        public SkipListSetItem(T data)
+        {
+            this.data = data;
+            next = null;
+            prev = null;
+            up = null;
+            down = null;
+            int girth = 0;
+        }
+        public int compareTo(T t)
+        {
+            return data.compareTo(t);
+        }
+
     }
 
 }
